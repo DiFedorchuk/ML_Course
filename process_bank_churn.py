@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -46,7 +46,7 @@ def drop_unused_columns(df: pd.DataFrame, columns_to_drop: List[str]) -> pd.Data
 
 def scale_numeric_features(
     train_df: pd.DataFrame, val_df: pd.DataFrame, numeric_cols: List[str]
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> Tuple[pd.DataFrame, pd.DataFrame, MinMaxScaler]:
     """
     Scale numeric features using MinMaxScaler.
     """
@@ -56,12 +56,12 @@ def scale_numeric_features(
     train_df[numeric_cols] = scaler.transform(train_df[numeric_cols])
     val_df[numeric_cols] = scaler.transform(val_df[numeric_cols])
 
-    return train_df, val_df
+    return train_df, val_df, scaler
 
 
 def encode_categorical_features(
     train_df: pd.DataFrame, val_df: pd.DataFrame, categorical_cols: List[str]
-) -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
+) -> Tuple[pd.DataFrame, pd.DataFrame, List[str], OneHotEncoder]:
     """
     One-hot encode categorical features.
     """
@@ -79,7 +79,7 @@ def encode_categorical_features(
     train_df = train_df.drop(columns=categorical_cols)
     val_df = val_df.drop(columns=categorical_cols)
 
-    return train_df, val_df, encoded_cols
+    return train_df, val_df, encoded_cols, encoder
 
 
 def preprocess_data(
@@ -87,7 +87,7 @@ def preprocess_data(
     target_col: str = "Exited",
     drop_cols: List[str] = ["Surname", "CustomerId"],
     scale_numeric: bool = True
-) -> Dict[str, pd.DataFrame]:
+) -> Dict[str, Any]:
     """
     Full preprocessing pipeline:
     - split data
@@ -106,12 +106,13 @@ def preprocess_data(
 
     numeric_cols, categorical_cols = get_column_types(train_inputs)
 
+    scaler = None
     if scale_numeric:
-        train_inputs, val_inputs = scale_numeric_features(
+        train_inputs, val_inputs, scaler = scale_numeric_features(
             train_inputs, val_inputs, numeric_cols
         )
 
-    train_inputs, val_inputs, encoded_cols = encode_categorical_features(
+    train_inputs, val_inputs, encoded_cols, encoder = encode_categorical_features(
         train_inputs, val_inputs, categorical_cols
     )
 
@@ -122,6 +123,9 @@ def preprocess_data(
         "train_targets": train_targets,
         "val_inputs": val_inputs[final_input_cols],
         "val_targets": val_targets,
+        "input_cols": final_input_cols,
+        "scaler": scaler,
+        "encoder": encoder,
     }
 
 
