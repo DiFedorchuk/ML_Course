@@ -138,8 +138,8 @@ def prepare_training_data(raw_df: pd.DataFrame, scale_numeric: bool = True) -> D
 
 def preprocess_new_data(
     new_df: pd.DataFrame,
-    scaler: MinMaxScaler,
-    encoder: OneHotEncoder,
+    scaler: MinMaxScaler = None,
+    encoder: OneHotEncoder = None,
     target_col: str = "Exited",
     drop_cols: List[str] = ["Surname", "CustomerId"]
 ) -> Dict[str, pd.DataFrame]:
@@ -147,7 +147,8 @@ def preprocess_new_data(
     Preprocess new data using pre-trained scaler and encoder.
     
     This function is useful for processing test data or new predictions
-    before feeding into a trained model.
+    before feeding into a trained model. The scaler and encoder parameters
+    are optional - if not provided, scaling and encoding steps are skipped.
     """
     # Drop unused columns
     new_df = drop_unused_columns(new_df, drop_cols)
@@ -163,17 +164,19 @@ def preprocess_new_data(
     # Identify numeric and categorical columns
     numeric_cols, categorical_cols = get_column_types(inputs)
     
-    # Scale numeric features using the pre-trained scaler
-    inputs[numeric_cols] = scaler.transform(inputs[numeric_cols])
+    # Scale numeric features using the pre-trained scaler (if provided)
+    if scaler is not None:
+        inputs[numeric_cols] = scaler.transform(inputs[numeric_cols])
     
-    # Encode categorical features using the pre-trained encoder
-    encoded_cols = encoder.get_feature_names_out(categorical_cols).tolist()
-    encoded_data = encoder.transform(inputs[categorical_cols])
-    inputs[encoded_cols] = encoded_data
-    inputs = inputs.drop(columns=categorical_cols)
-    
-    # Final input columns
-    final_input_cols = numeric_cols + encoded_cols
+    # Encode categorical features using the pre-trained encoder (if provided)
+    if encoder is not None:
+        encoded_cols = encoder.get_feature_names_out(categorical_cols).tolist()
+        encoded_data = encoder.transform(inputs[categorical_cols])
+        inputs[encoded_cols] = encoded_data
+        inputs = inputs.drop(columns=categorical_cols)
+        final_input_cols = numeric_cols + encoded_cols
+    else:
+        final_input_cols = numeric_cols + categorical_cols
     
     # Prepare result dictionary
     result = {"inputs": inputs[final_input_cols]}
